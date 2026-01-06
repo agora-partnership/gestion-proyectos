@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Proyectos v13.0 - Firebase Clean</title>
+    <title>Gestión de Proyectos</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -42,7 +42,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const DATA_VERSION = "13.3"; // Cambiar esta versión fuerza recarga de datos
+        const DATA_VERSION = "13.4"; // Cambiar esta versión fuerza recarga de datos
         const INITIAL_DATA = {
             miembros: [
                 { id: 2, nombre: "Alonso Zapata", roles: ["Programadores", "Guardián de Calidad", "Responsable de Datos y Aprendizaje Estratégico", "Innovación Tec", "Strategic Challenger"] },
@@ -583,7 +583,7 @@
                     <header className="bg-white shadow-md">
                         <div className="max-w-7xl mx-auto px-4 py-6">
                             <h1 className="text-3xl font-bold text-indigo-900">
-                                <i className="fas fa-project-diagram mr-3"></i>Gestión de Proyectos v13.0
+                                <i className="fas fa-project-diagram mr-3"></i>Gestión de Proyectos
                             </h1>
                             <p className="text-gray-600 mt-1">Optimiza la planificación y asignación de recursos</p>
                         </div>
@@ -969,45 +969,55 @@
 
         function VistaProyectos({ proyectos, miembros, tiposIntervencion, calcularDisponibilidad, asignarMiembro, desasignarMiembro, estaBloqueado, onAgregarProyecto, onEditarProyecto, onEliminarProyecto, actualizarFechas }) {
             const [expandido, setExpandido] = useState(null);
-            const [filtro, setFiltro] = useState('Todos');
 
-            const proysFiltrados = filtro === 'Todos' ? proyectos : proyectos.filter(p => p.categoria === filtro);
+            // Separar proyectos por categoría
+            const semipermanentes = proyectos.filter(p => p.categoria === 'Semipermanente').sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+            const radiales = proyectos.filter(p => p.categoria === 'Radial').sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+            const transversales = proyectos.filter(p => p.categoria === 'Transversal').sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+            const renderProyectos = (proyectosList, titulo, colorClasses) => {
+                if (proyectosList.length === 0) return null;
+                
+                return (
+                    <div className="space-y-4">
+                        <h2 className={`text-2xl font-bold ${colorClasses}`}>
+                            {titulo} ({proyectosList.length})
+                        </h2>
+                        {proyectosList.map(p => (
+                            <ProyectoCard
+                                key={p.id}
+                                proyecto={p}
+                                miembros={miembros}
+                                tiposIntervencion={tiposIntervencion}
+                                calcularDisponibilidad={calcularDisponibilidad}
+                                asignarMiembro={(rol, mId, porcentaje) => asignarMiembro(p.id, rol, mId, false, porcentaje)}
+                                desasignarMiembro={(rol, mId) => desasignarMiembro(p.id, rol, mId, false)}
+                                estaBloqueado={estaBloqueado}
+                                actualizarFechas={(fi, ff) => actualizarFechas(p.id, fi, ff, false)}
+                                expandido={expandido === p.id}
+                                setExpandido={() => setExpandido(expandido === p.id ? null : p.id)}
+                                onEditar={() => onEditarProyecto(p)}
+                                onEliminar={() => onEliminarProyecto(p.id)}
+                            />
+                        ))}
+                    </div>
+                );
+            };
 
             return (
-                <div className="space-y-6">
+                <div className="space-y-8">
                     <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-4">
-                            <label className="text-sm font-medium text-gray-700">Categoría:</label>
-                            <select value={filtro} onChange={(e) => setFiltro(e.target.value)} className="px-4 py-2 border rounded-lg">
-                                {['Todos', 'Semipermanente', 'Radial', 'Transversal'].map(c => (
-                                    <option key={c}>{c}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <h1 className="text-3xl font-bold text-gray-900">Ramas/Flores</h1>
                         <button onClick={onAgregarProyecto} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
                             <i className="fas fa-plus mr-2"></i>Nuevo Proyecto
                         </button>
                     </div>
 
-                    {proysFiltrados.map(p => (
-                        <ProyectoCard
-                            key={p.id}
-                            proyecto={p}
-                            miembros={miembros}
-                            tiposIntervencion={tiposIntervencion}
-                            calcularDisponibilidad={calcularDisponibilidad}
-                            asignarMiembro={(rol, mId, porcentaje) => asignarMiembro(p.id, rol, mId, false, porcentaje)}
-                            desasignarMiembro={(rol, mId) => desasignarMiembro(p.id, rol, mId, false)}
-                            estaBloqueado={estaBloqueado}
-                            actualizarFechas={(fi, ff) => actualizarFechas(p.id, fi, ff, false)}
-                            expandido={expandido === p.id}
-                            setExpandido={() => setExpandido(expandido === p.id ? null : p.id)}
-                            onEditar={() => onEditarProyecto(p)}
-                            onEliminar={() => onEliminarProyecto(p.id)}
-                        />
-                    ))}
+                    {renderProyectos(semipermanentes, '🌳 Semipermanentes', 'text-green-700')}
+                    {renderProyectos(radiales, '🔵 Radiales', 'text-blue-700')}
+                    {renderProyectos(transversales, '🔶 Transversales', 'text-orange-700')}
 
-                    {proysFiltrados.length === 0 && (
+                    {proyectos.length === 0 && (
                         <div className="text-center py-12 bg-white rounded-lg shadow-md">
                             <i className="fas fa-folder-open text-gray-400 text-5xl mb-4"></i>
                             <p className="text-gray-600">No hay proyectos</p>
@@ -1147,7 +1157,9 @@
             const [expandido, setExpandido] = useState(false);
             const [porcentajePersonalizado, setPorcentajePersonalizado] = useState({});
             const asignados = (item.asignaciones || []).filter(a => a.rol === rol.nombre);
-            const disponibles = miembros.filter(m => m.roles.includes(rol.nombre) && !asignados.some(a => a.miembroId === m.id));
+            const disponibles = miembros
+                .filter(m => m.roles.includes(rol.nombre) && !asignados.some(a => a.miembroId === m.id))
+                .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
             const getPorcentajeSugerido = () => {
                 return rol.porcentaje || tiposIntervencion[rol.tipo] || 50;
@@ -1211,26 +1223,31 @@
                                 <div>
                                     <p className="text-sm font-medium text-gray-700 mb-2">Asignados:</p>
                                     <div className="space-y-2">
-                                        {asignados.map((asig, i) => {
-                                            const m = miembros.find(mm => mm.id === asig.miembroId);
-                                            if (!m) return null;
-                                            const disp = calcularDisponibilidad(m.id);
-                                            const porcentajeAsignado = asig.porcentaje || rol.porcentaje || tiposIntervencion[rol.tipo];
-                                            return (
-                                                <div key={i} className="flex items-center justify-between p-2 bg-indigo-50 rounded-lg">
-                                                    <div className="flex items-center space-x-2">
-                                                        <span className="font-medium text-gray-900">{m.nombre}</span>
-                                                        <span className="text-xs px-2 py-1 bg-indigo-200 text-indigo-900 rounded">
-                                                            {porcentajeAsignado}% de tiempo
-                                                        </span>
-                                                        <span className="text-xs text-gray-600">({disp}% disponible)</span>
+                                        {asignados
+                                            .map(asig => {
+                                                const m = miembros.find(mm => mm.id === asig.miembroId);
+                                                return { asig, m };
+                                            })
+                                            .filter(item => item.m !== undefined)
+                                            .sort((a, b) => a.m.nombre.localeCompare(b.m.nombre, 'es'))
+                                            .map(({ asig, m }, i) => {
+                                                const disp = calcularDisponibilidad(m.id);
+                                                const porcentajeAsignado = asig.porcentaje || rol.porcentaje || tiposIntervencion[rol.tipo];
+                                                return (
+                                                    <div key={i} className="flex items-center justify-between p-2 bg-indigo-50 rounded-lg">
+                                                        <div className="flex items-center space-x-2">
+                                                            <span className="font-medium text-gray-900">{m.nombre}</span>
+                                                            <span className="text-xs px-2 py-1 bg-indigo-200 text-indigo-900 rounded">
+                                                                {porcentajeAsignado}% de tiempo
+                                                            </span>
+                                                            <span className="text-xs text-gray-600">({disp}% disponible)</span>
+                                                        </div>
+                                                        <button onClick={() => desasignarMiembro(rol.nombre, m.id)} className="text-red-600 hover:text-red-800">
+                                                            <i className="fas fa-times"></i>
+                                                        </button>
                                                     </div>
-                                                    <button onClick={() => desasignarMiembro(rol.nombre, m.id)} className="text-red-600 hover:text-red-800">
-                                                        <i className="fas fa-times"></i>
-                                                    </button>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })}
                                     </div>
                                 </div>
                             )}
