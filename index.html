@@ -409,24 +409,36 @@
             };
 
             const asignarMiembro = (itemId, rol, miembroId, esEntidad = false, porcentajePersonalizado = null) => {
-                console.log('🔍 asignarMiembro llamado:', { itemId, rol, miembroId, esEntidad, porcentajePersonalizado });
+                console.log('🔍 asignarMiembro llamado:', { itemId, rol, miembroId, esEntidad, porcentajePersonalizado, 'tipo de porcentaje': typeof porcentajePersonalizado });
                 
                 const items = esEntidad ? entidades : proyectos;
                 const setItems = esEntidad ? setEntidades : setProyectos;
                 const item = items.find(p => p.id === itemId);
                 const miembro = miembros.find(m => m.id === miembroId);
                 
-                if (!item || !miembro) return;
+                if (!item || !miembro) {
+                    console.error('❌ Item o miembro no encontrado:', { item, miembro });
+                    return;
+                }
 
                 const disponibilidad = calcularDisponibilidad(miembroId);
                 const rolInfo = item.roles.find(r => r.nombre === rol);
                 
+                console.log('📋 Rol encontrado:', { rolInfo, 'rol buscado': rol, 'roles disponibles': item.roles.map(r => r.nombre) });
+                
                 // Usar porcentaje personalizado si existe (incluso si es 0), sino usar rol o tipo
                 const cargaRol = (porcentajePersonalizado !== null && porcentajePersonalizado !== undefined) 
-                    ? porcentajePersonalizado 
+                    ? Number(porcentajePersonalizado)
                     : (rolInfo?.porcentaje || tiposIntervencion[rolInfo?.tipo] || 50);
 
-                console.log('📊 Carga calculada:', { cargaRol, porcentajePersonalizado, 'rolInfo?.porcentaje': rolInfo?.porcentaje, 'tiposIntervencion[rolInfo?.tipo]': tiposIntervencion[rolInfo?.tipo] });
+                console.log('📊 Carga calculada:', { 
+                    cargaRol, 
+                    porcentajePersonalizado, 
+                    'porcentajePersonalizado !== null': porcentajePersonalizado !== null,
+                    'porcentajePersonalizado !== undefined': porcentajePersonalizado !== undefined,
+                    'rolInfo?.porcentaje': rolInfo?.porcentaje, 
+                    'tiposIntervencion[rolInfo?.tipo]': tiposIntervencion[rolInfo?.tipo] 
+                });
 
                 if (disponibilidad - cargaRol < 10) {
                     alert('Este miembro excedería el 90% de carga permitida.');
@@ -444,16 +456,25 @@
                 setItems(items.map(p => {
                     if (p.id === itemId) {
                         const asignaciones = p.asignaciones || [];
-                        if (asignaciones.some(a => a.rol === rol && a.miembroId === miembroId)) return p;
+                        if (asignaciones.some(a => a.rol === rol && a.miembroId === miembroId)) {
+                            console.warn('⚠️ Ya existe esta asignación, no se duplica');
+                            return p;
+                        }
                         
                         // CRÍTICO: Guardar el porcentaje personalizado, no el fallback
                         const porcentajeAGuardar = (porcentajePersonalizado !== null && porcentajePersonalizado !== undefined) 
-                            ? porcentajePersonalizado 
+                            ? Number(porcentajePersonalizado)
                             : (rolInfo?.porcentaje || tiposIntervencion[rolInfo?.tipo] || 50);
                         
-                        console.log('💾 Guardando asignación con porcentaje:', porcentajeAGuardar);
+                        console.log('💾 Guardando asignación:', { 
+                            rol, 
+                            miembroId, 
+                            porcentaje: porcentajeAGuardar,
+                            'tipo de porcentaje guardado': typeof porcentajeAGuardar,
+                            'total asignaciones después': asignaciones.length + 1
+                        });
                         
-                        return { 
+                        const nuevoItem = { 
                             ...p, 
                             asignaciones: [...asignaciones, { 
                                 rol, 
@@ -462,9 +483,19 @@
                                 fecha: new Date().toISOString() 
                             }] 
                         };
+                        
+                        console.log('✅ Nuevo item creado:', { 
+                            id: nuevoItem.id, 
+                            nombre: nuevoItem.nombre, 
+                            asignaciones: nuevoItem.asignaciones 
+                        });
+                        
+                        return nuevoItem;
                     }
                     return p;
                 }));
+                
+                console.log('🎉 asignarMiembro completado');
             };
 
             const desasignarMiembro = (itemId, rol, miembroId, esEntidad = false) => {
