@@ -45,7 +45,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const DATA_VERSION = "13.8"; // Cambiar esta versión fuerza recarga de datos
+        const DATA_VERSION = "13.9"; // Cambiar esta versión fuerza recarga de datos
         const INITIAL_DATA = {
             miembros: [
                 { id: 2, nombre: "Alonso Zapata", roles: ["Programadores", "Guardián de Calidad", "Responsable de Datos y Aprendizaje Estratégico", "Innovación Tec", "Strategic Challenger"] },
@@ -410,8 +410,24 @@
                 setMiembroEdit(null);
             };
 
-            const eliminarMiembro = (id) => {
-                if (confirm('¿Eliminar este miembro?')) setMiembros(miembros.filter(m => m.id !== id));
+            const eliminarMiembro = async (id) => {
+                if (!confirm('¿Eliminar este miembro? Esta acción no se puede deshacer.')) return;
+                
+                try {
+                    // Eliminar de Firebase
+                    const miembro = miembros.find(m => m.id === id);
+                    if (miembro) {
+                        const docRef = firebaseDoc(firebaseDb, 'miembros', miembro.nombre);
+                        await firebaseDeleteDoc(docRef);
+                        console.log('✅ Miembro eliminado de Firebase:', miembro.nombre);
+                    }
+                    
+                    // Actualizar estado local
+                    setMiembros(miembros.filter(m => m.id !== id));
+                } catch (error) {
+                    console.error('❌ Error eliminando miembro:', error);
+                    alert('Error al eliminar el miembro. Intenta de nuevo.');
+                }
             };
 
             const guardarProyecto = (proyecto) => {
@@ -424,8 +440,24 @@
                 setProyectoEdit(null);
             };
 
-            const eliminarProyecto = (id) => {
-                if (confirm('¿Eliminar esta rama/flor?')) setProyectos(proyectos.filter(p => p.id !== id));
+            const eliminarProyecto = async (id) => {
+                if (!confirm('¿Eliminar esta rama/flor? Esta acción no se puede deshacer.')) return;
+                
+                try {
+                    // Eliminar de Firebase
+                    const proyecto = proyectos.find(p => p.id === id);
+                    if (proyecto) {
+                        const docRef = firebaseDoc(firebaseDb, 'proyectos', proyecto.nombre);
+                        await firebaseDeleteDoc(docRef);
+                        console.log('✅ Proyecto eliminado de Firebase:', proyecto.nombre);
+                    }
+                    
+                    // Actualizar estado local
+                    setProyectos(proyectos.filter(p => p.id !== id));
+                } catch (error) {
+                    console.error('❌ Error eliminando proyecto:', error);
+                    alert('Error al eliminar el proyecto. Intenta de nuevo.');
+                }
             };
 
             // === GESTIÓN DE RAÍCES/NUTRIENTES ===
@@ -439,8 +471,24 @@
                 setEntidadEdit(null);
             };
 
-            const eliminarEntidad = (id) => {
-                if (confirm('¿Eliminar esta raíz/nutriente?')) setEntidades(entidades.filter(e => e.id !== id));
+            const eliminarEntidad = async (id) => {
+                if (!confirm('¿Eliminar esta raíz/nutriente? Esta acción no se puede deshacer.')) return;
+                
+                try {
+                    // Eliminar de Firebase
+                    const entidad = entidades.find(e => e.id === id);
+                    if (entidad) {
+                        const docRef = firebaseDoc(firebaseDb, 'entidades', entidad.nombre);
+                        await firebaseDeleteDoc(docRef);
+                        console.log('✅ Entidad eliminada de Firebase:', entidad.nombre);
+                    }
+                    
+                    // Actualizar estado local
+                    setEntidades(entidades.filter(e => e.id !== id));
+                } catch (error) {
+                    console.error('❌ Error eliminando entidad:', error);
+                    alert('Error al eliminar la entidad. Intenta de nuevo.');
+                }
             };
 
             // === GESTIÓN DE ROLES ===
