@@ -45,7 +45,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const DATA_VERSION = "13.10"; // Cambiar esta versión fuerza recarga de datos
+        const DATA_VERSION = "13.12"; // Cambiar esta versión fuerza recarga de datos
         const INITIAL_DATA = {
             miembros: [
                 { id: 2, nombre: "Alonso Zapata", roles: ["Programadores", "Guardián de Calidad", "Responsable de Datos y Aprendizaje Estratégico", "Innovación Tec", "Strategic Challenger"] },
@@ -411,19 +411,51 @@
             };
 
             const eliminarMiembro = async (id) => {
+                console.log('🔍 eliminarMiembro llamado con ID:', id, 'tipo:', typeof id);
+                
                 if (!confirm('¿Eliminar este miembro? Esta acción no se puede deshacer.')) return;
                 
                 try {
-                    // Eliminar de Firebase (usar el ID, no el nombre)
-                    const docRef = window.firebaseDoc(window.firebaseDB, 'miembros', String(id));
+                    console.log('📋 Lista de miembros actuales:', miembros.map(m => ({ id: m.id, nombre: m.nombre })));
+                    
+                    // Verificar que window.firebaseDB existe
+                    if (!window.firebaseDB) {
+                        throw new Error('Firebase DB no está inicializado');
+                    }
+                    console.log('✅ Firebase DB disponible');
+                    
+                    // Verificar que window.firebaseDoc existe
+                    if (!window.firebaseDoc) {
+                        throw new Error('firebaseDoc no está disponible');
+                    }
+                    console.log('✅ firebaseDoc disponible');
+                    
+                    // Verificar que window.firebaseDeleteDoc existe
+                    if (!window.firebaseDeleteDoc) {
+                        throw new Error('firebaseDeleteDoc no está disponible');
+                    }
+                    console.log('✅ firebaseDeleteDoc disponible');
+                    
+                    // Crear referencia al documento
+                    const docId = String(id);
+                    console.log('📄 ID del documento:', docId);
+                    
+                    const docRef = window.firebaseDoc(window.firebaseDB, 'miembros', docId);
+                    console.log('📄 Referencia creada:', docRef);
+                    
+                    // Eliminar de Firebase
+                    console.log('🗑️ Intentando eliminar de Firebase...');
                     await window.firebaseDeleteDoc(docRef);
                     console.log('✅ Miembro eliminado de Firebase, ID:', id);
                     
                     // Actualizar estado local
+                    console.log('🔄 Actualizando estado local...');
                     setMiembros(miembros.filter(m => m.id !== id));
+                    console.log('✅ Estado local actualizado');
                 } catch (error) {
                     console.error('❌ Error eliminando miembro:', error);
-                    alert('Error al eliminar el miembro. Intenta de nuevo.');
+                    console.error('❌ Stack:', error.stack);
+                    alert('Error al eliminar el miembro: ' + error.message);
                 }
             };
 
@@ -1859,8 +1891,8 @@
         function VistaReportes({ miembros, proyectos, entidades, calcularDisponibilidad, tiposIntervencion, exportarAExcel, exportarReporteCarga, exportarReporteDisponibilidad }) {
             const [tabActiva, setTabActiva] = useState('carga');
             const [busqueda, setBusqueda] = useState('');
-            const [ordenCarga, setOrdenCarga] = useState('desc');
-            const [ordenDisp, setOrdenDisp] = useState('desc');
+            const [ordenCarga, setOrdenCarga] = useState('nombre'); // Alfabético por defecto
+            const [ordenDisp, setOrdenDisp] = useState('nombre'); // Alfabético por defecto
 
             // Datos para Reporte de Carga
             const dataCarga = miembros
@@ -1881,7 +1913,11 @@
                     };
                 })
                 .filter(d => d.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-                .sort((a, b) => ordenCarga === 'desc' ? b.carga - a.carga : a.carga - b.carga);
+                .sort((a, b) => {
+                    if (ordenCarga === 'nombre') return a.nombre.localeCompare(b.nombre, 'es');
+                    if (ordenCarga === 'desc') return b.carga - a.carga;
+                    return a.carga - b.carga; // asc
+                });
 
             // Datos para Disponibilidad
             const dataDisp = miembros
@@ -1902,7 +1938,11 @@
                     };
                 })
                 .filter(d => d.nombre.toLowerCase().includes(busqueda.toLowerCase()))
-                .sort((a, b) => ordenDisp === 'desc' ? b.disp - a.disp : a.disp - b.disp);
+                .sort((a, b) => {
+                    if (ordenDisp === 'nombre') return a.nombre.localeCompare(b.nombre, 'es');
+                    if (ordenDisp === 'desc') return b.disp - a.disp;
+                    return a.disp - b.disp; // asc
+                });
 
             // Resumen estadístico
             const promCarga = dataCarga.reduce((sum, d) => sum + d.carga, 0) / dataCarga.length || 0;
@@ -1964,11 +2004,18 @@
                                             className="px-4 py-2 border rounded-lg w-64"
                                         />
                                         <button
-                                            onClick={() => setOrdenCarga(ordenCarga === 'desc' ? 'asc' : 'desc')}
+                                            onClick={() => {
+                                                if (ordenCarga === 'nombre') setOrdenCarga('desc');
+                                                else if (ordenCarga === 'desc') setOrdenCarga('asc');
+                                                else setOrdenCarga('nombre');
+                                            }}
                                             className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
                                         >
-                                            <i className={`fas fa-sort-amount-${ordenCarga === 'desc' ? 'down' : 'up'} mr-2`}></i>
-                                            Ordenar
+                                            <i className={`fas fa-${
+                                                ordenCarga === 'nombre' ? 'sort-alpha-down' :
+                                                ordenCarga === 'desc' ? 'sort-amount-down' : 'sort-amount-up'
+                                            } mr-2`}></i>
+                                            {ordenCarga === 'nombre' ? 'Alfabético' : ordenCarga === 'desc' ? 'Mayor carga' : 'Menor carga'}
                                         </button>
                                     </div>
 
@@ -2038,11 +2085,18 @@
                                             className="px-4 py-2 border rounded-lg w-64"
                                         />
                                         <button
-                                            onClick={() => setOrdenDisp(ordenDisp === 'desc' ? 'asc' : 'desc')}
+                                            onClick={() => {
+                                                if (ordenDisp === 'nombre') setOrdenDisp('desc');
+                                                else if (ordenDisp === 'desc') setOrdenDisp('asc');
+                                                else setOrdenDisp('nombre');
+                                            }}
                                             className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
                                         >
-                                            <i className={`fas fa-sort-amount-${ordenDisp === 'desc' ? 'down' : 'up'} mr-2`}></i>
-                                            Ordenar
+                                            <i className={`fas fa-${
+                                                ordenDisp === 'nombre' ? 'sort-alpha-down' :
+                                                ordenDisp === 'desc' ? 'sort-amount-down' : 'sort-amount-up'
+                                            } mr-2`}></i>
+                                            {ordenDisp === 'nombre' ? 'Alfabético' : ordenDisp === 'desc' ? 'Mayor disponibilidad' : 'Menor disponibilidad'}
                                         </button>
                                     </div>
 
